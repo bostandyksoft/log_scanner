@@ -1,5 +1,7 @@
 package ru.avmakarov;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.avmakarov.parser.LogLineParser;
 
 import java.io.BufferedReader;
@@ -9,6 +11,7 @@ import java.io.InputStreamReader;
 import java.util.List;
 
 public class LogScanner {
+    private final Logger logger = LoggerFactory.getLogger(LogScanner.class);
 
     private final LogLineParser lineParser;
 
@@ -29,7 +32,15 @@ public class LogScanner {
             ScannerContext context = new ScannerContext(availability, requestThreshold);
             String line;
             while ((line = reader.readLine()) != null) {
-                context.next(lineParser.parse(line));
+                if ("exit".equalsIgnoreCase(line.trim())) {
+                    break;
+                }
+                LogLineParser.LineInfo info = lineParser.parse(line);
+                if (info == null) {
+                    logger.warn("Ошибка разбора строки {}",line);
+                    continue;
+                }
+                context.next(info);
             }
             context.flushTimestamp(true);
             return context.getReport();
