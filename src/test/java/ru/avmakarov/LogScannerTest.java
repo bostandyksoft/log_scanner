@@ -1,90 +1,100 @@
 package ru.avmakarov;
 
-import org.junit.jupiter.api.Test;
-import ru.avmakarov.parser.LogLineParser;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import ru.avmakarov.parser.SimpleLogLineParser;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertIterableEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class LogScannerTest {
+public class LogScannerTest {
 
-    private static final Map<String, LogLineParser.LineInfo> testData = Map.of(
-            //#2 - 50%
-            "1", new LogLineParser.LineInfo("2", 200, 20.0),
-            "2", new LogLineParser.LineInfo("2", 500, 20.0),
-            //#3 - 100%
-            "3", new LogLineParser.LineInfo("3", 200, 20.0),
-            "4", new LogLineParser.LineInfo("3", 200, 20.0),
-            //#4 - 66%
-            "5", new LogLineParser.LineInfo("4", 500, 20.0),
-            "6", new LogLineParser.LineInfo("4", 200, 20.0),
-            "7", new LogLineParser.LineInfo("4", 200, 20.0)
-    );
+	private final LogScanner scanner = new LogScanner(new SimpleLogLineParser());
 
-    private static final String testKeys = IntStream.range(1, testData.size() + 1).mapToObj(Integer::toString).collect(Collectors.joining("\n"));
+	public static Stream<Arguments> access_log_test_source() {
+		return Stream.of(
+				Arguments.of(99.9, 45.0,
+						List.of(
+								new ReportEntry(
+										"[14/06/2017:16:47:02 +1000]",
+										"[14/06/2017:16:47:27 +1000]",
+										1487,
+										373
+								),
+								new ReportEntry(
+										"[14/06/2017:16:47:29 +1000]",
+										"[14/06/2017:16:47:36 +1000]",
+										499,
+										47
+								),
+								new ReportEntry(
+										"[14/06/2017:16:47:39 +1000]",
+										"[14/06/2017:16:48:01 +1000]",
+										1378,
+										194
+								),
+								new ReportEntry(
+										"[14/06/2017:16:48:03 +1000]",
+										"[14/06/2017:16:48:16 +1000]",
+										884,
+										118
+								),
+								new ReportEntry(
+										"[14/06/2017:16:48:18 +1000]",
+										"[14/06/2017:16:48:18 +1000]",
+										92,
+										17
+								),
+								new ReportEntry(
+										"[14/06/2017:16:48:20 +1000]",
+										"[14/06/2017:16:48:22 +1000]",
+										186,
+										17
+								),
+								new ReportEntry(
+										"[14/06/2017:16:48:24 +1000]",
+										"[14/06/2017:16:48:29 +1000]",
+										412,
+										45
+								),
+								new ReportEntry(
+										"[14/06/2017:16:48:33 +1000]",
+										"[14/06/2017:16:48:39 +1000]",
+										461,
+										33
+								),
+								new ReportEntry(
+										"[14/06/2017:16:48:41 +1000]",
+										"[14/06/2017:16:48:48 +1000]",
+										585,
+										74
+								),
+								new ReportEntry(
+										"[14/06/2017:16:48:50 +1000]",
+										"[14/06/2017:16:48:52 +1000]",
+										188,
+										15
+								)
+						)
+				)
+		);
+	}
 
-    private static class MapBasedParser implements LogLineParser {
+	@ParameterizedTest
+	@MethodSource("access_log_test_source")
+	void access_log_test(double availability, double requestThreshold, List<ReportEntry> expected) throws IOException {
+		try (InputStream stream = this.getClass().getResourceAsStream("access.log")) {
+			List<ReportEntry> actual = scanner.read(stream, availability, requestThreshold);
 
-        @Override
-        public LineInfo parse(String line) {
-            return testData.get(line);
-        }
-    }
-
-    private LogScanner scanner = new LogScanner(new MapBasedParser());
-
-    @Test
-    void empty_stream() throws IOException {
-        try (InputStream stream = new ByteArrayInputStream("".getBytes())) {
-            assertTrue(
-                    scanner.read(stream, 99.9, 45.0).isEmpty()
-            );
-        }
-    }
-
-    @Test
-    void test_80_percent() throws IOException {
-        try (InputStream stream = new ByteArrayInputStream(testKeys.getBytes())) {
-            assertIterableEquals(
-                    List.of(
-                            new ReportEntry("2", "4", 7, 2)
-                    ),
-                    scanner.read(stream, 80, 45.0)
-            );
-        }
-    }
-
-    @Test
-    void test_70_percent() throws IOException {
-        try (InputStream stream = new ByteArrayInputStream(testKeys.getBytes())) {
-            assertIterableEquals(
-                    List.of(
-                            new ReportEntry("2", "2", 2, 1),
-                            new ReportEntry("4", "4", 3, 1)
-                    ),
-                    scanner.read(stream, 70, 45.0)
-            );
-        }
-    }
-
-    @Test
-    void test_60_percent() throws IOException {
-        try (InputStream stream = new ByteArrayInputStream(testKeys.getBytes())) {
-            assertIterableEquals(
-                    List.of(
-                            new ReportEntry("2", "2", 2, 1)
-                    ),
-                    scanner.read(stream, 60, 45.0)
-            );
-        }
-    }
+			assertEquals(expected, actual,
+					"Проверка " + availability + " / " + requestThreshold
+			);
+		}
+	}
 
 }

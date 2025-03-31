@@ -42,7 +42,7 @@ public class ReportEntry {
 
     @Override
     public String toString() {
-        return beginTimestamp + ' ' + endTimestamp + ' ' + format.get().format(getAvailability());
+        return beginTimestamp + ' ' + endTimestamp + ' ' + format.get().format(getAvailability()) + " ("+getTotalCount()+", "+getFailureCount()+")";
     }
 
     @Override

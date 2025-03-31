@@ -21,12 +21,12 @@ public class LogScanner {
      *
      * @param inputStream  Входящий поток
      * @param availability Уровень доступности в %
-     * @param threshold    Максимально допустимое время ответа
+     * @param requestThreshold    Максимально допустимое время ответа
      * @throws IOException при ошибки обработки входящих данных
      */
-    public List<ReportEntry> read(InputStream inputStream, double availability, double threshold) throws IOException {
+    public List<ReportEntry> read(InputStream inputStream, double availability, double requestThreshold) throws IOException {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-            ScannerContext context = new ScannerContext(availability, threshold);
+            ScannerContext context = new ScannerContext(availability, requestThreshold);
             String line;
             while ((line = reader.readLine()) != null) {
                 context.next(lineParser.parse(line));

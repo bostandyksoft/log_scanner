@@ -19,13 +19,13 @@ public class Application {
         options.addOption("f", "file", true, "Файл логов");
 
         CommandLineParser parser = new DefaultParser();
-        double availability, threshold;
+        double availability, requestThreshold;
         File file = null;
         try {
             CommandLine cmd = parser.parse(options, args);
 
             availability = Double.parseDouble(cmd.getOptionValue("u"));
-            threshold = Double.parseDouble(cmd.getOptionValue("t"));
+            requestThreshold = Double.parseDouble(cmd.getOptionValue("t"));
 
             String filePath = cmd.getOptionValue("f");
             if (!StringUtils.isEmpty(filePath)) {
@@ -44,16 +44,16 @@ public class Application {
         }
 
         try (InputStream stream = selectStream(file)) {
-            run(stream, availability, threshold);
+            run(stream, availability, requestThreshold);
         } catch (Exception e) {
             logger.error(e.getMessage());
             System.exit(1);
         }
     }
 
-    static void run(InputStream inputStream, double availability, double threshold) throws IOException {
+    static void run(InputStream inputStream, double availability, double requestThreshold) throws IOException {
         LogScanner scanner = new LogScanner(new SimpleLogLineParser());
-        List<ReportEntry> report = scanner.read(inputStream, availability, threshold);
+        List<ReportEntry> report = scanner.read(inputStream, availability, requestThreshold);
 
         for (ReportEntry reportEntry : report) {
             System.out.println(reportEntry.toString());
